@@ -32,4 +32,23 @@ build/
 ### VS Code ###
 .vscode/
 
-.env/*
+.env
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Java Build artifacts
+target/
+*.jar
+*.war
+
+# Environment variables (already in your list, but double check)
+.env
+
+# Compressed backup files
+*.zip
+
+# Operating System files
+.DS_Store
+Thumbs.db
