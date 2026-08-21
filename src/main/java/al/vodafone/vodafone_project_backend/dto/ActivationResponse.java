@@ -6,6 +6,7 @@ import java.util.UUID;
 public record ActivationResponse(
     UUID subscriptionId,
     UUID touristId,
+    UUID transactionId,
     String orderRef,
     ActivationStatus status,
     String esimQrUrl
