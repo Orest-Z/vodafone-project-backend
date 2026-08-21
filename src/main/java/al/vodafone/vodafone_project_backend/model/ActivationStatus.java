@@ -8,4 +8,4 @@ public enum ActivationStatus
         ACTIVE, 
         FAILED, 
         CANCELLED 
-    }
+    }  
