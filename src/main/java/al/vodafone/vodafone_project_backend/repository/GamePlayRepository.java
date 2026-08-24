@@ -13,7 +13,6 @@ import java.util.UUID;
 public interface GamePlayRepository extends JpaRepository<GamePlay, UUID> {
     boolean existsByTouristIdAndGameId(UUID touristId, UUID gameId);
 
-    // This query extracts just the string codes from the user's played games
     @Query("SELECT gp.game.code FROM GamePlay gp WHERE gp.tourist.id = :touristId")
     List<String> findPlayedGameCodesByTouristId(@Param("touristId") UUID touristId);
 }
