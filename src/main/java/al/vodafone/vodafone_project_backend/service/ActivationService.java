@@ -17,12 +17,14 @@ public class ActivationService {
     private final UserSubscriptionRepository userSubscriptionRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    
+    private final EmailService emailService;
 
     @Transactional
     public ActivationResponse activate(ActivationRequest req) {
         Pack pack = packRepository.findById(req.packId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid pack ID"));
-
+                
         // Guard against duplicate submissions (e.g. a retried/double-clicked
         // capture on the frontend) re-inserting a second paid activation for
         // the same PayPal order.
@@ -74,6 +76,17 @@ public class ActivationService {
         credit.setReason(CreditReason.PACK_ACTIVATION_BONUS);
         creditTransactionRepository.save(credit);
 
+        //Generate magic token and send email right before returning
+        String magicToken = java.util.UUID.randomUUID().toString();
+        //Next add a 'magicToken' column to your UserSubscription entity 
+        
+        emailService.sendTouristWelcomeEmail(
+            req.email(), 
+            req.firstName(),
+            "Vodafone Tourist Pack", // Or pack.getName() if your Pack model has a name field
+            magicToken
+        );
+
         return new ActivationResponse(
                 subscription.getId(),
                 tourist.getId(),
@@ -82,5 +95,6 @@ public class ActivationService {
                 subscription.getStatus(),
                 subscription.getEsimQrUrl()
         );
+        
     }
 }
