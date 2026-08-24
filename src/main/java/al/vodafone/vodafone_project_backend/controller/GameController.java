@@ -1,9 +1,11 @@
 package al.vodafone.vodafone_project_backend.controller;
 
+import al.vodafone.vodafone_project_backend.dto.ClaimDailyCreditRequest;
 import al.vodafone.vodafone_project_backend.dto.GameHubStateResponse;
 import al.vodafone.vodafone_project_backend.dto.PlayGameRequest;
 import al.vodafone.vodafone_project_backend.dto.PlayGameResponse;
 import al.vodafone.vodafone_project_backend.service.GameService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +25,30 @@ public class GameController {
         return ResponseEntity.ok(gameService.getGameState(touristId));
     }
 
+    @PostMapping("/game-hub/claim-daily-credit")
+    public ResponseEntity<GameHubStateResponse> claimDailyCredit(
+            @Valid @RequestBody ClaimDailyCreditRequest req) {
+        return ResponseEntity.ok(gameService.claimDailyCredit(req.touristId()));
+    }
+
     @PostMapping("/games/{gameCode}/play")
     public ResponseEntity<PlayGameResponse> playGame(
             @PathVariable String gameCode,
-            @Valid @RequestBody PlayGameRequest req) {
-        return ResponseEntity.ok(gameService.playGame(gameCode, req));
+            @Valid @RequestBody PlayGameRequest req,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(gameService.playGame(
+                gameCode,
+                req,
+                clientIp(httpRequest),
+                httpRequest.getHeader("User-Agent")
+        ));
+    }
+
+    private String clientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }
