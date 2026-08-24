@@ -1,22 +1,23 @@
 package al.vodafone.vodafone_project_backend.service;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
-import com.resend.services.emails.model.CreateEmailResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final Resend resend;
+    private final JavaMailSender mailSender;
 
-    @Value("${resend.sender-email}")
+    @Value("${spring.mail.username}")
     private String senderEmail;
 
     public void sendTouristWelcomeEmail(String toEmail, String touristName, String packageName, String magicToken) {
@@ -37,19 +38,22 @@ public class EmailService {
                 "<p style=\"color: #999; font-size: 12px; text-align: center; margin-top: 40px;\">© 2026 Vodafone Albania. All rights reserved.</p>" +
                 "</div></div></div>";
 
-        // CHANGED: Using CreateEmailOptions instead of SendEmailRequest
-        CreateEmailOptions sendEmailOptions = CreateEmailOptions.builder()
-                .from(senderEmail)
-                .to(toEmail)
-                .subject("Your Vodafone Tourist Pass is Ready")
-                .html(htmlBody)
-                .build();
-
         try {
-            // CHANGED: Using CreateEmailResponse instead of SendEmailResponse
-            CreateEmailResponse data = resend.emails().send(sendEmailOptions);
-            log.info("Welcome email sent successfully to {}. Message ID: {}", toEmail, data.getId());
-        } catch (ResendException e) {
+            // Create a MimeMessage to support HTML content
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(senderEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Your Vodafone Tourist Pass is Ready");
+            
+            // The 'true' boolean flag indicates that the text is HTML
+            helper.setText(htmlBody, true);
+
+            mailSender.send(message);
+            log.info("Welcome email sent successfully via Gmail SMTP to {}", toEmail);
+
+        } catch (MessagingException e) {
             log.error("Failed to send welcome email to {}. Error: {}", toEmail, e.getMessage(), e);
         }
     }
