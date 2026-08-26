@@ -13,12 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class GameService {
+
+    private static final String DAILY_DROP_GAME_CODE = "daily_drop";
 
     private final GameRepository gameRepository;
     private final TouristRepository touristRepository;
@@ -33,18 +34,25 @@ public class GameService {
         return ZoneId.of(gameHubTimezone);
     }
 
+    private Game dailyDropGame() {
+        return gameRepository.findByCode(DAILY_DROP_GAME_CODE)
+                .orElseThrow(() -> new IllegalStateException("daily_drop game is not seeded"));
+    }
+
     @Transactional(readOnly = true)
     public GameHubStateResponse getGameState(UUID touristId) {
         int credits = creditTransactionRepository.getBalanceByTouristId(touristId);
-        List<String> playedGames = gamePlayRepository.findPlayedGameCodesByTouristId(touristId);
-
         LocalDate today = LocalDate.now(zone());
+
+        boolean hasPlayedToday = gamePlayRepository.existsByTouristIdAndGameIdAndPlayedDateAndDropType(
+                touristId, dailyDropGame().getId(), today, DropType.FREE);
+
         boolean claimedToday = dailyCreditClaimRepository.existsByTouristIdAndClaimDate(touristId, today);
         Instant nextClaimAt = claimedToday
                 ? today.plusDays(1).atStartOfDay(zone()).toInstant()
                 : null;
 
-        return new GameHubStateResponse(credits, playedGames, !claimedToday, nextClaimAt);
+        return new GameHubStateResponse(credits, hasPlayedToday, !claimedToday, nextClaimAt);
     }
 
     @Transactional
@@ -73,33 +81,48 @@ public class GameService {
     }
 
     @Transactional
-    public PlayGameResponse playGame(String gameCode, PlayGameRequest req, String ipAddress, String userAgent) {
-        Game game = gameRepository.findByCode(gameCode)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameCode));
+    public PlayGameResponse playDrop(PlayGameRequest req, String ipAddress, String userAgent) {
+        return play(req.touristId(), DropType.FREE, ipAddress, userAgent);
+    }
 
-        Tourist tourist = touristRepository.findById(req.touristId())
-                .orElseThrow(() -> new IllegalArgumentException("Tourist not found: " + req.touristId()));
+    @Transactional
+    public PlayGameResponse playPaidRedrop(PlayGameRequest req, String ipAddress, String userAgent) {
+        return play(req.touristId(), DropType.PAID_REDROP, ipAddress, userAgent);
+    }
 
-        if (gamePlayRepository.existsByTouristIdAndGameId(tourist.getId(), game.getId())) {
-            throw new IllegalStateException("Game already played by this tourist.");
+    private PlayGameResponse play(UUID touristId, DropType dropType, String ipAddress, String userAgent) {
+        Game game = dailyDropGame();
+
+        Tourist tourist = touristRepository.findById(touristId)
+                .orElseThrow(() -> new IllegalArgumentException("Tourist not found: " + touristId));
+
+        LocalDate today = LocalDate.now(zone());
+
+        if (gamePlayRepository.existsByTouristIdAndGameIdAndPlayedDateAndDropType(
+                touristId, game.getId(), today, dropType)) {
+            throw new IllegalStateException("Already played today.");
         }
 
-        int currentCredits = creditTransactionRepository.getBalanceByTouristId(tourist.getId());
-        if (currentCredits <= 0) {
-            throw new IllegalStateException("Insufficient game credits.");
-        }
+        if (dropType == DropType.FREE) {
+            int currentCredits = creditTransactionRepository.getBalanceByTouristId(touristId);
+            if (currentCredits <= 0) {
+                throw new IllegalStateException("Insufficient game credits.");
+            }
 
-        CreditTransaction spendTx = new CreditTransaction();
-        spendTx.setTourist(tourist);
-        spendTx.setDelta(-1);
-        spendTx.setReason(CreditReason.GAME_SPEND);
-        creditTransactionRepository.save(spendTx);
+            CreditTransaction spendTx = new CreditTransaction();
+            spendTx.setTourist(tourist);
+            spendTx.setDelta(-1);
+            spendTx.setReason(CreditReason.GAME_SPEND);
+            creditTransactionRepository.save(spendTx);
+        }
 
         String prizeCode = "VF-REWARD-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
 
         GamePlay play = new GamePlay();
         play.setTourist(tourist);
         play.setGame(game);
+        play.setPlayedDate(today);
+        play.setDropType(dropType);
         play.setWon(true);
         play.setPrizeCode(prizeCode);
         play.setIpAddress(ipAddress);
