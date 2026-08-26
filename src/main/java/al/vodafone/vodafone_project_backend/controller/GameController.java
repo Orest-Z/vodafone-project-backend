@@ -31,16 +31,21 @@ public class GameController {
         return ResponseEntity.ok(gameService.claimDailyCredit(req.touristId()));
     }
 
-    @PostMapping("/games/{gameCode}/play")
-    public ResponseEntity<PlayGameResponse> playGame(
-            @PathVariable String gameCode,
+    @PostMapping("/drop/play")
+    public ResponseEntity<PlayGameResponse> playDrop(
             @Valid @RequestBody PlayGameRequest req,
             HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(gameService.playGame(
-                gameCode,
-                req,
-                clientIp(httpRequest),
-                httpRequest.getHeader("User-Agent")
+        return ResponseEntity.ok(gameService.playDrop(
+                req, clientIp(httpRequest), httpRequest.getHeader("User-Agent")
+        ));
+    }
+
+    @PostMapping("/drop/redrop/play")
+    public ResponseEntity<PlayGameResponse> playPaidRedrop(
+            @Valid @RequestBody PlayGameRequest req,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(gameService.playPaidRedrop(
+                req, clientIp(httpRequest), httpRequest.getHeader("User-Agent")
         ));
     }
 
