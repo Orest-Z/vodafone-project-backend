@@ -2,10 +2,13 @@ package al.vodafone.vodafone_project_backend.service;
 
 import al.vodafone.vodafone_project_backend.dto.PackDto;
 import al.vodafone.vodafone_project_backend.dto.PackFeatureDto;
+import al.vodafone.vodafone_project_backend.dto.SponsorOfferResponse;
 import al.vodafone.vodafone_project_backend.repository.PackRepository;
+import al.vodafone.vodafone_project_backend.repository.PartnerOfferRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +18,8 @@ import java.util.UUID;
 public class PackService {
 
     private final PackRepository packRepository;
+
+  
 
     @Transactional(readOnly = true)
     public List<PackDto> getAllActivePacks() {
@@ -54,4 +59,13 @@ public class PackService {
                         .toList()
         );
     }
+      private final PartnerOfferRepository partnerOfferRepository; // add this field, constructor injected via @RequiredArgsConstructor
+    public List<SponsorOfferResponse> getActiveSponsorOffers() {
+    return partnerOfferRepository.findAllActiveWithPartner().stream()
+        .map(po -> new SponsorOfferResponse(
+            po.getPartner().getName(),
+            po.getDiscountLabel(),
+            po.getPartner().getLogoUrl()))
+        .toList();
+}
 }
