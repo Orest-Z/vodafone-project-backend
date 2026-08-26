@@ -1,6 +1,7 @@
 package al.vodafone.vodafone_project_backend.controller;
 
 import al.vodafone.vodafone_project_backend.dto.PackDto;
+import al.vodafone.vodafone_project_backend.dto.SponsorOfferResponse;
 import al.vodafone.vodafone_project_backend.service.PackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,4 +26,8 @@ public class PackController {
     public ResponseEntity<PackDto> getPack(@PathVariable UUID packId) {
         return ResponseEntity.ok(packService.getPackById(packId));
     }
+        @GetMapping("/sponsors")
+    public ResponseEntity<List<SponsorOfferResponse>> getSponsorOffers() {
+        return ResponseEntity.ok(packService.getActiveSponsorOffers());
+        }
 }
