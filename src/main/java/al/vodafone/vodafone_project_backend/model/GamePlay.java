@@ -1,30 +1,22 @@
-// model/GamePlay.java
 package al.vodafone.vodafone_project_backend.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
-/**
- * Server-side execution log for a single game play. This row is the source
- * of truth for whether a tourist played a given game and what they won —
- * the frontend never sends a score or a result, it only ever asks to play
- * and gets told the outcome. ipAddress/userAgent are captured for abuse
- * review, and the unique constraint below stops two concurrent requests
- * (e.g. a double-tap or a retried request) from both squeezing through the
- * "already played?" check in GameService and creating two plays (and
- * spending two credits) for the same tourist+game.
- */
 @Entity
 @Table(
         name = "game_plays",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_game_play_tourist_game",
-                columnNames = {"tourist_id", "game_id"}
+                name = "uk_game_play_tourist_game_date_type",
+                columnNames = {"tourist_id", "game_id", "played_date", "drop_type"}
         )
 )
 @Getter @Setter
@@ -41,6 +33,13 @@ public class GamePlay {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
+
+    @Column(name = "played_date", nullable = false)
+    private LocalDate playedDate;
+
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "drop_type", nullable = false)
+    private DropType dropType;
 
     private boolean won;
 
