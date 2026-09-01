@@ -26,6 +26,10 @@ public class GamePlay {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "prize_id")
+         private Prize prize;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tourist_id", nullable = false)
     private Tourist tourist;

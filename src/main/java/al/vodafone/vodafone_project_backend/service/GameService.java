@@ -3,6 +3,7 @@ package al.vodafone.vodafone_project_backend.service;
 import al.vodafone.vodafone_project_backend.dto.GameHubStateResponse;
 import al.vodafone.vodafone_project_backend.dto.PlayGameRequest;
 import al.vodafone.vodafone_project_backend.dto.PlayGameResponse;
+import al.vodafone.vodafone_project_backend.dto.PrizeCatalogEntry;
 import al.vodafone.vodafone_project_backend.model.*;
 import al.vodafone.vodafone_project_backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class GameService {
     private final GamePlayRepository gamePlayRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final DailyCreditClaimRepository dailyCreditClaimRepository;
+    private final PrizeRepository prizeRepository;
 
     @Value("${app.game-hub.timezone:Europe/Tirane}")
     private String gameHubTimezone;
@@ -41,6 +45,9 @@ public class GameService {
 
     @Transactional(readOnly = true)
     public GameHubStateResponse getGameState(UUID touristId) {
+        Tourist tourist = touristRepository.findById(touristId)
+                .orElseThrow(() -> new IllegalArgumentException("Tourist not found: " + touristId));
+
         int credits = creditTransactionRepository.getBalanceByTouristId(touristId);
         LocalDate today = LocalDate.now(zone());
 
@@ -52,7 +59,8 @@ public class GameService {
                 ? today.plusDays(1).atStartOfDay(zone()).toInstant()
                 : null;
 
-        return new GameHubStateResponse(credits, hasPlayedToday, !claimedToday, nextClaimAt);
+        return new GameHubStateResponse(
+                tourist.getFirstName(), credits, hasPlayedToday, !claimedToday, nextClaimAt);
     }
 
     @Transactional
@@ -117,6 +125,7 @@ public class GameService {
         }
 
         String prizeCode = "VF-REWARD-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        Prize prize = pickRandomPrize();
 
         GamePlay play = new GamePlay();
         play.setTourist(tourist);
@@ -124,15 +133,72 @@ public class GameService {
         play.setPlayedDate(today);
         play.setDropType(dropType);
         play.setWon(true);
+        play.setPrize(prize);
         play.setPrizeCode(prizeCode);
         play.setIpAddress(ipAddress);
         play.setUserAgent(userAgent);
 
         gamePlayRepository.saveAndFlush(play);
 
+        String label = prize != null ? prize.getLabel() : "15% Off Local Restaurants";
+        String sponsor = prize != null && prize.getSponsorName() != null ? prize.getSponsorName() : "OPA!";
+
         return new PlayGameResponse(
                 true,
-                new PlayGameResponse.PrizeDetails("15% Off Local Restaurants", "OPA!", prizeCode)
+                new PlayGameResponse.PrizeDetails(label, sponsor, prizeCode)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrizeCatalogEntry> getPrizeCatalog() {
+        List<Prize> activePrizes = prizeRepository.findAllActive();
+        if (activePrizes.isEmpty()) {
+            return List.of();
+        }
+
+        int totalWeight = totalWeight(activePrizes);
+
+        return activePrizes.stream()
+                .sorted((a, b) -> effectiveWeight(b) - effectiveWeight(a))
+                .map(p -> new PrizeCatalogEntry(
+                        p.getLabel(),
+                        p.getSponsorName(),
+                        p.getDiscountPercent(),
+                        totalWeight > 0
+                                ? (effectiveWeight(p) * 100.0) / totalWeight
+                                : 100.0 / activePrizes.size()
+                ))
+                .toList();
+    }
+
+    private int effectiveWeight(Prize p) {
+        return p.getWeight() != null ? Math.max(p.getWeight(), 0) : 0;
+    }
+
+    private int totalWeight(List<Prize> prizes) {
+        return prizes.stream().mapToInt(this::effectiveWeight).sum();
+    }
+
+    private Prize pickRandomPrize() {
+        List<Prize> activePrizes = prizeRepository.findAllActive();
+        if (activePrizes.isEmpty()) {
+            return null;
+        }
+
+        int totalWeight = totalWeight(activePrizes);
+
+        if (totalWeight <= 0) {
+            return activePrizes.get(ThreadLocalRandom.current().nextInt(activePrizes.size()));
+        }
+
+        int roll = ThreadLocalRandom.current().nextInt(totalWeight);
+        int cumulative = 0;
+        for (Prize p : activePrizes) {
+            cumulative += effectiveWeight(p);
+            if (roll < cumulative) {
+                return p;
+            }
+        }
+        return activePrizes.get(activePrizes.size() - 1);
     }
 }
