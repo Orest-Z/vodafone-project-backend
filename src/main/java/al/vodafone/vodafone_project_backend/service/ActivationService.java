@@ -7,7 +7,7 @@ import al.vodafone.vodafone_project_backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import al.vodafone.vodafone_project_backend.dto.DiscountLookupResponse;
 @Service
 @RequiredArgsConstructor
 public class ActivationService {
@@ -17,7 +17,7 @@ public class ActivationService {
     private final UserSubscriptionRepository userSubscriptionRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
-    
+    private final GamePlayRepository gamePlayRepository;
     private final EmailService emailService;
 
     @Transactional
@@ -97,4 +97,12 @@ public class ActivationService {
         );
         
     }
+
+            @Transactional(readOnly = true)
+        public DiscountLookupResponse getAvailableDiscountByEmail(String email) {
+            return touristRepository.findByEmail(email)
+                    .flatMap(t -> gamePlayRepository.findFirstUnredeemedPackDiscount(t.getId()))
+                    .map(gp -> new DiscountLookupResponse(true, gp.getPrize().getDiscountPercent()))
+                    .orElse(new DiscountLookupResponse(false, null));
+        }
 }
