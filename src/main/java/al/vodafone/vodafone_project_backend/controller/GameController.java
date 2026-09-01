@@ -4,6 +4,7 @@ import al.vodafone.vodafone_project_backend.dto.ClaimDailyCreditRequest;
 import al.vodafone.vodafone_project_backend.dto.GameHubStateResponse;
 import al.vodafone.vodafone_project_backend.dto.PlayGameRequest;
 import al.vodafone.vodafone_project_backend.dto.PlayGameResponse;
+import al.vodafone.vodafone_project_backend.dto.PrizeCatalogEntry;
 import al.vodafone.vodafone_project_backend.service.GameService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,6 +25,11 @@ public class GameController {
     @GetMapping("/game-hub/state")
     public ResponseEntity<GameHubStateResponse> getGameState(@RequestParam UUID touristId) {
         return ResponseEntity.ok(gameService.getGameState(touristId));
+    }
+
+    @GetMapping("/game-hub/prizes")
+    public ResponseEntity<List<PrizeCatalogEntry>> getPrizeCatalog() {
+        return ResponseEntity.ok(gameService.getPrizeCatalog());
     }
 
     @PostMapping("/game-hub/claim-daily-credit")
