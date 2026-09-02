@@ -163,8 +163,17 @@ public class EmailService {
         return """
                 <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
                 <tr>
-                <td align="center" style="padding-bottom: 12px;">
-                <a href="%s" style="display: block; background-color: %s; color: #fff; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; text-align: center;">Open Game Hub</a>
+                <td style="padding-bottom: 8px;">
+                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
+                <tr>
+                <td width="50%%" style="padding-right: 6px;">
+                <a href="%s" style="display: block; background-color: %s; color: #fff; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center;">Open Game Hub</a>
+                </td>
+                <td width="50%%" style="padding-left: 6px;">
+                <a href="%s" style="display: block; background-color: #fff; color: %s; border: 1px solid %s; padding: 13px 0; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; text-align: center;">My Pack Details</a>
+                </td>
+                </tr>
+                </table>
                 </td>
                 </tr>
                 <tr>
@@ -182,7 +191,8 @@ public class EmailService {
                 </td>
                 </tr>
                 </table>
-                """.formatted(ctx.gameHubUrl(), RED, ctx.appleWalletUrl(), ctx.googleWalletUrl(), INK, BORDER);
+                """.formatted(ctx.gameHubUrl(), RED, ctx.myPackUrl(), INK, BORDER,
+                              ctx.appleWalletUrl(), ctx.googleWalletUrl(), INK, BORDER);
     }
 
     private String faqSection(TouristWelcomeEmailContext ctx) {
@@ -198,8 +208,8 @@ public class EmailService {
                         BORDER, MUTED,
                         faqItem("My eSIM QR code won't scan. What now?",
                                 "Make sure Wi-Fi is on when you scan — eSIM activation needs a data connection the first time. If it still fails, use the manual activation code included with your QR instead."),
-                        faqItem("Can I check my remaining data and minutes?",
-                                "Balance and usage will show up in your Game Hub dashboard, linked above, once that view ships."),
+                        faqItem("Can I check my pack details and expiry date?",
+                                "Yes — use the \"My Pack Details\" button above. It shows your order reference, activation date, expiry date, and game hub credits anytime."),
                         faqItem("What happens when my pack runs out?",
                                 "You can top up or buy a new pack from the same page you activated this one from. Your Game Hub credits and prize history carry over."),
                         faqItem("Who do I contact if something's wrong?",

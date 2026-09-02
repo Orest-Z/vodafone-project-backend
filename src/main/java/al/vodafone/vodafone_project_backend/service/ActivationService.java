@@ -5,9 +5,11 @@ import al.vodafone.vodafone_project_backend.dto.ActivationResponse;
 import al.vodafone.vodafone_project_backend.model.*;
 import al.vodafone.vodafone_project_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import al.vodafone.vodafone_project_backend.dto.DiscountLookupResponse;
+import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class ActivationService {
@@ -19,6 +21,10 @@ public class ActivationService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final GamePlayRepository gamePlayRepository;
     private final EmailService emailService;
+    private final PassKitService passKitService;
+
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
 
     @Transactional
     public ActivationResponse activate(ActivationRequest req) {
@@ -76,16 +82,38 @@ public class ActivationService {
         credit.setReason(CreditReason.PACK_ACTIVATION_BONUS);
         creditTransactionRepository.save(credit);
 
-        //Generate magic token and send email right before returning
-        String magicToken = java.util.UUID.randomUUID().toString();
-        //Next add a 'magicToken' column to your UserSubscription entity 
-        
-        emailService.sendTouristWelcomeEmail(
-            req.email(), 
-            req.firstName(),
-            "Vodafone Tourist Pack", // Or pack.getName() if your Pack model has a name field
-            magicToken
+        Optional<PassKitService.PassKitEnrollment> passkitEnrollment =
+                passKitService.enrollTourist(tourist, subscription, pack);
+
+        String appleWalletUrl = frontendBaseUrl + "/wallet/apple/" + subscription.getId();
+        String googleWalletUrl = frontendBaseUrl + "/wallet/google/" + subscription.getId();
+
+        if (passkitEnrollment.isPresent()) {
+            PassKitService.PassKitEnrollment enrollment = passkitEnrollment.get();
+            subscription.setPasskitMemberId(enrollment.memberId());
+            subscription.setPasskitPassUrl(enrollment.passUrl());
+            subscription = userSubscriptionRepository.save(subscription);
+
+            appleWalletUrl = enrollment.applePassUrl();
+            googleWalletUrl = enrollment.googlePassUrl();
+        }
+
+        TouristWelcomeEmailContext emailContext = new TouristWelcomeEmailContext(
+                tourist.getFirstName(),
+                subscription.getOrderRef(),
+                pack.getTitle(),
+                pack.getDataAllowance(),
+                pack.getMinutesAllowance(),
+                pack.getDurationDays(),
+                subscription.getDeliveryMethod(),
+                subscription.getEsimQrUrl(),
+                subscription.getEsimManualCode(),
+                frontendBaseUrl + "/game-hub?touristId=" + tourist.getId(),
+                appleWalletUrl,
+                googleWalletUrl,
+                frontendBaseUrl + "/my-pack?touristId=" + tourist.getId()
         );
+        emailService.sendTouristWelcomeEmail(req.email(), emailContext);
 
         return new ActivationResponse(
                 subscription.getId(),

@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface UserSubscriptionRepository extends JpaRepository<UserSubscription, UUID> {
     Optional<UserSubscription> findByOrderRef(String orderRef);
+    Optional<UserSubscription> findFirstByTouristIdOrderByCreatedAtDesc(UUID touristId);
 }
