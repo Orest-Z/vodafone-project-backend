@@ -170,7 +170,7 @@ public class EmailService {
                 <a href="%s" style="display: block; background-color: %s; color: #fff; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center;">Open Game Hub</a>
                 </td>
                 <td width="50%%" style="padding-left: 6px;">
-                <a href="%s" style="display: block; background-color: #fff; color: %s; border: 1px solid %s; padding: 13px 0; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; text-align: center;">My Pack Details</a>
+                <a href="%s" style="display: block; background-color: #fff; color: %s; border: 1px solid %s; padding: 13px 0; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; text-align: center;">Check Your Data Usage</a>
                 </td>
                 </tr>
                 </table>
@@ -209,7 +209,7 @@ public class EmailService {
                         faqItem("My eSIM QR code won't scan. What now?",
                                 "Make sure Wi-Fi is on when you scan — eSIM activation needs a data connection the first time. If it still fails, use the manual activation code included with your QR instead."),
                         faqItem("Can I check my pack details and expiry date?",
-                                "Yes — use the \"My Pack Details\" button above. It shows your order reference, activation date, expiry date, and game hub credits anytime."),
+                                "Yes — use the \"Check Your Data Usage\" button above. It shows your order reference, activation date, expiry date, and game hub credits anytime."),
                         faqItem("What happens when my pack runs out?",
                                 "You can top up or buy a new pack from the same page you activated this one from. Your Game Hub credits and prize history carry over."),
                         faqItem("Who do I contact if something's wrong?",
