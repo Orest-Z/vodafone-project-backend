@@ -24,6 +24,9 @@ public class UserSubscription {
     @Column(nullable = false) private ActivationStatus status = ActivationStatus.PENDING;
 
     @Column(name = "esim_qr_url") private String esimQrUrl;
+    @Column(name = "esim_manual_code") private String esimManualCode;
+    @Column(name = "passkit_member_id") private String passkitMemberId;
+    @Column(name = "passkit_pass_url") private String passkitPassUrl;
     @Column(name = "activated_at") private Instant activatedAt;
     @CreationTimestamp @Column(name = "created_at", updatable = false) private Instant createdAt;
 }
