@@ -23,7 +23,7 @@ public class Tourist {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "passport_number", nullable = false, length = 50)
