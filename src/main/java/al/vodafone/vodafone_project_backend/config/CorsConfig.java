@@ -17,10 +17,13 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+                // Comma-separated so a second origin (e.g. the dev machine's
+                // LAN IP, for testing from a phone on the same Wi-Fi) can be
+                // added without a code change — see app.cors.allowed-origin.
                 registry.addMapping("/api/**")
-                        .allowedOrigins(allowedOrigin)
-                        .allowedMethods("GET", "POST", "PUT", "DELETE")
-                        .allowedHeaders("*");
+                        .allowedOrigins(allowedOrigin.split("\\s*,\\s*"))
+                        .allowedMethods("GET", "POST")
+                        .allowedHeaders("Content-Type");
             }
         };
     }
