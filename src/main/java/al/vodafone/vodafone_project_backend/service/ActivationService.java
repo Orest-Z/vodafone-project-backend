@@ -22,6 +22,7 @@ public class ActivationService {
     private final GamePlayRepository gamePlayRepository;
     private final EmailService emailService;
     private final PassKitService passKitService;
+    private final EsimProvisioningService esimProvisioningService;
 
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
@@ -49,6 +50,18 @@ public class ActivationService {
         tourist.setTermsAccepted(req.termsAccepted());
         tourist = touristRepository.save(tourist);
 
+        // Consume any unredeemed game-hub discount now that a purchase has
+        // actually gone through. create-order (frontend) always applies a
+        // tourist's unredeemed PACK_DISCOUNT to the price it quotes PayPal
+        // whenever one exists, so an existing unredeemed discount at this
+        // point necessarily means it was already baked into amountPaid —
+        // without this, the same discount could be reused indefinitely.
+        gamePlayRepository.findFirstUnredeemedPackDiscount(tourist.getId())
+                .ifPresent(discountPlay -> {
+                    discountPlay.setRedeemedAt(java.time.Instant.now());
+                    gamePlayRepository.save(discountPlay);
+                });
+
         // Generate Order Ref (e.g. VF-A8F2K9)
         String orderRef = "VF-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
@@ -59,6 +72,19 @@ public class ActivationService {
         subscription.setOrderRef(orderRef);
         subscription.setDeliveryMethod(req.deliveryMethod());
         subscription.setStatus(ActivationStatus.ACTIVE);
+        // Never set anywhere before — every subscription's activatedAt (and
+        // therefore /my-pack's derived expiresAt) was silently null, which
+        // is why "Activated"/"Expires" only ever showed dashes.
+        subscription.setActivatedAt(java.time.Instant.now());
+
+        if (subscription.getDeliveryMethod() == DeliveryMethod.ESIM) {
+            EsimProvisioningService.FakeEsimProfile esim = esimProvisioningService.generate();
+            subscription.setEsimActivationCode(esim.activationCode());
+            subscription.setEsimQrUrl(esim.installLink());
+            subscription.setEsimManualCode(esim.activationCode());
+            subscription.setEsimPhoneNumber(esim.phoneNumber());
+        }
+
         subscription = userSubscriptionRepository.save(subscription);
 
         // Record the payment itself — this is the row that was missing
@@ -108,6 +134,8 @@ public class ActivationService {
                 subscription.getDeliveryMethod(),
                 subscription.getEsimQrUrl(),
                 subscription.getEsimManualCode(),
+                subscription.getEsimActivationCode(),
+                subscription.getEsimPhoneNumber(),
                 frontendBaseUrl + "/game-hub?touristId=" + tourist.getId(),
                 appleWalletUrl,
                 googleWalletUrl,
