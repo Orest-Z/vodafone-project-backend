@@ -25,6 +25,8 @@ public class UserSubscription {
 
     @Column(name = "esim_qr_url") private String esimQrUrl;
     @Column(name = "esim_manual_code") private String esimManualCode;
+    @Column(name = "esim_activation_code") private String esimActivationCode;
+    @Column(name = "esim_phone_number") private String esimPhoneNumber;
     @Column(name = "passkit_member_id") private String passkitMemberId;
     @Column(name = "passkit_pass_url") private String passkitPassUrl;
     @Column(name = "activated_at") private Instant activatedAt;

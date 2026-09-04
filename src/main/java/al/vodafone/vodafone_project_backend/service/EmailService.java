@@ -2,6 +2,9 @@ package al.vodafone.vodafone_project_backend.service;
 
 import al.vodafone.vodafone_project_backend.model.DeliveryMethod;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -21,8 +24,13 @@ public class EmailService {
     private static final String MUTED = "#6b6b6b";
     private static final String BORDER = "#e8e8e8";
     private static final String CARD_BG = "#fafafa";
+    private static final String HEADER_IMAGE_PATH = "images/emailHeader.png";
+    private static final String HEADER_IMAGE_CID = "emailHeaderImage";
+    private static final String ESIM_QR_CID = "esimQrCode";
+    private static final int ESIM_QR_SIZE_PX = 360;
 
     private final JavaMailSender mailSender;
+    private final QrCodeService qrCodeService;
 
     @Value("${spring.mail.username}")
     private String senderEmail;
@@ -58,22 +66,33 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("Your Vodafone Tourist Pass is ready — " + ctx.orderRef());
             helper.setText(htmlBody, true);
+            helper.addInline(HEADER_IMAGE_CID, new ClassPathResource(HEADER_IMAGE_PATH));
+
+            if (ctx.deliveryMethod() == DeliveryMethod.ESIM && ctx.esimActivationCode() != null) {
+                byte[] qrPng = qrCodeService.generatePng(ctx.esimActivationCode(), ESIM_QR_SIZE_PX);
+                helper.addInline(ESIM_QR_CID, new ByteArrayResource(qrPng), "image/png");
+            }
 
             mailSender.send(message);
             log.info("Welcome email sent successfully via Gmail SMTP to {}", toEmail);
 
         } catch (MessagingException e) {
             log.error("Failed to send welcome email to {}. Error: {}", toEmail, e.getMessage(), e);
+        } catch (MailException e) {
+            // mailSender.send() throws this unchecked (e.g. SMTP auth/connection
+            // failure) rather than the checked MessagingException above. A tourist
+            // who already paid must not have their activation rolled back just
+            // because the confirmation email couldn't be delivered.
+            log.error("Failed to send welcome email to {} via SMTP. Error: {}", toEmail, e.getMessage(), e);
         }
     }
 
     private String header() {
         return """
-                <div style="background-color: %s; padding: 28px 28px; text-align: center; color: white;">
-                <h1 style="margin: 0; font-size: 26px; letter-spacing: -0.5px;">vodafone</h1>
-                <p style="margin: 6px 0 0 0; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; opacity: 0.9;">Albania Tourist Pass</p>
+                <div style="background-color: %s; text-align: center;">
+                <img src="cid:%s" width="600" alt="Vodafone Albania Tourist Pass" style="display: block; width: 100%%; max-width: 600px; height: auto;" />
                 </div>
-                """.formatted(RED);
+                """.formatted(RED, HEADER_IMAGE_CID);
     }
 
     private String greetingAndSummary(TouristWelcomeEmailContext ctx) {
@@ -105,7 +124,7 @@ public class EmailService {
 
     private String deliverySection(TouristWelcomeEmailContext ctx) {
         if (ctx.deliveryMethod() == DeliveryMethod.ESIM) {
-            return ctx.esimQrUrl() != null ? esimReadySection(ctx) : esimPendingSection();
+            return ctx.esimActivationCode() != null ? esimReadySection(ctx) : esimPendingSection();
         }
         return physicalSimSection();
     }
@@ -113,9 +132,16 @@ public class EmailService {
     private String esimReadySection(TouristWelcomeEmailContext ctx) {
         String manualCodeRow = ctx.esimManualCode() != null
                 ? """
-                  <p style="margin: 12px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: %s;">Can't scan?</p>
+                  <p style="margin: 14px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: %s;">Can't scan or tap?</p>
                   <p style="margin: 4px 0 0 0; font-family: 'Courier New', monospace; font-size: 13px; background: #fff; border: 1px solid %s; border-radius: 6px; padding: 8px 10px; color: %s; word-break: break-all;">%s</p>
                   """.formatted(MUTED, BORDER, INK, ctx.esimManualCode())
+                : "";
+
+        String phoneNumberRow = ctx.esimPhoneNumber() != null
+                ? """
+                  <p style="margin: 14px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: %s;">Your Vodafone AL number</p>
+                  <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: %s;">%s</p>
+                  """.formatted(MUTED, INK, ctx.esimPhoneNumber())
                 : "";
 
         return """
@@ -123,13 +149,15 @@ public class EmailService {
                 <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background: %s; border: 1px solid %s; border-radius: 10px;">
                 <tr>
                 <td style="padding: 20px; text-align: center;">
-                <img src="%s" width="150" height="150" alt="eSIM activation QR code" style="display: block; margin: 0 auto; border-radius: 8px; border: 1px solid %s;" />
-                <p style="margin: 12px 0 0 0; font-size: 13px; color: %s;">Open Camera or Settings &rarr; Cellular &rarr; Add eSIM and scan this code.</p>
+                <img src="cid:%s" width="180" height="180" alt="eSIM activation QR code" style="display: block; margin: 0 auto; border-radius: 8px; border: 1px solid %s;" />
+                <p style="margin: 12px 0 0 0; font-size: 13px; color: %s;">On this iPhone, tap the button below. On another device, open Camera and scan the code.</p>
+                <a href="%s" style="display: inline-block; margin-top: 14px; background-color: %s; color: #fff; padding: 13px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px;">Add eSIM to iPhone</a>
+                %s
                 %s
                 </td>
                 </tr>
                 </table>
-                """.formatted(INK, CARD_BG, BORDER, ctx.esimQrUrl(), BORDER, MUTED, manualCodeRow);
+                """.formatted(INK, CARD_BG, BORDER, ESIM_QR_CID, BORDER, MUTED, ctx.esimQrUrl(), RED, phoneNumberRow, manualCodeRow);
     }
 
     private String esimPendingSection() {

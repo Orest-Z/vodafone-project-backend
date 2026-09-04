@@ -12,6 +12,8 @@ public record TouristWelcomeEmailContext(
     DeliveryMethod deliveryMethod,
     String esimQrUrl,
     String esimManualCode,
+    String esimActivationCode,
+    String esimPhoneNumber,
     String gameHubUrl,
     String appleWalletUrl,
     String googleWalletUrl,
