@@ -4,8 +4,11 @@ import al.vodafone.vodafone_project_backend.dto.DiscountLookupResponse;
 import al.vodafone.vodafone_project_backend.dto.SubscriptionStatusResponse;
 import al.vodafone.vodafone_project_backend.service.ActivationService;
 import al.vodafone.vodafone_project_backend.service.TouristService;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
@@ -14,13 +17,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/tourists")
 @RequiredArgsConstructor
+@Validated
 public class TouristController {
 
     private final ActivationService activationService;
     private final TouristService touristService;
 
     @GetMapping("/discount-by-email")
-    public ResponseEntity<DiscountLookupResponse> getDiscountByEmail(@RequestParam String email) {
+    public ResponseEntity<DiscountLookupResponse> getDiscountByEmail(
+            @RequestParam @NotBlank @Email String email) {
         return ResponseEntity.ok(activationService.getAvailableDiscountByEmail(email));
     }
 
