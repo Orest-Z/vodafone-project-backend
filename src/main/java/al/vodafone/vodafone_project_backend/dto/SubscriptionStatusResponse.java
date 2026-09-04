@@ -20,5 +20,7 @@ public record SubscriptionStatusResponse(
     Instant expiresAt,
     BigDecimal amountPaid,
     String currency,
-    int gameCredits
+    int gameCredits,
+    String appleWalletUrl,
+    String googleWalletUrl
 ) {}

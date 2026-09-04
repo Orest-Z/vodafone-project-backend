@@ -6,6 +6,7 @@ import al.vodafone.vodafone_project_backend.model.Tourist;
 import al.vodafone.vodafone_project_backend.model.UserSubscription;
 import al.vodafone.vodafone_project_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,9 @@ public class TouristService {
     private final UserSubscriptionRepository userSubscriptionRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final CreditTransactionRepository creditTransactionRepository;
+
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
 
     @Transactional(readOnly = true)
     public SubscriptionStatusResponse getSubscriptionStatus(UUID touristId) {
@@ -43,6 +47,16 @@ public class TouristService {
                 ? sub.getActivatedAt().plus(pack.getDurationDays(), ChronoUnit.DAYS)
                 : null;
 
+        // Same fallback as ActivationService's welcome email: a real PassKit
+        // pass URL when enrollment succeeded, otherwise the local wallet
+        // placeholder route — so this button is never a dead link.
+        String appleWalletUrl = sub.getPasskitPassUrl() != null
+                ? sub.getPasskitPassUrl() + ".pkpass"
+                : frontendBaseUrl + "/wallet/apple/" + sub.getId();
+        String googleWalletUrl = sub.getPasskitPassUrl() != null
+                ? sub.getPasskitPassUrl() + ".gpay"
+                : frontendBaseUrl + "/wallet/google/" + sub.getId();
+
         return new SubscriptionStatusResponse(
                 sub.getId(),
                 tourist.getFirstName(),
@@ -59,7 +73,9 @@ public class TouristService {
                 expiresAt,
                 payment != null ? payment.getAmountPaid() : null,
                 payment != null ? payment.getCurrency() : null,
-                gameCredits
+                gameCredits,
+                appleWalletUrl,
+                googleWalletUrl
         );
     }
 }
