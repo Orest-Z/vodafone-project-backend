@@ -12,6 +12,7 @@ public record PackDto(
     Integer durationDays,
     String dataAllowance,
     Integer minutesAllowance,
+    String roamingDetails,
     String imageUrl,
     List<PackFeatureDto> features
 ) {}

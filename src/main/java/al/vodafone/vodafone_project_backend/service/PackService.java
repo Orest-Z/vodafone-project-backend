@@ -32,6 +32,7 @@ public class PackService {
                         pack.getDurationDays(),
                         pack.getDataAllowance(),
                         pack.getMinutesAllowance(),
+                        pack.getRoamingDetails(),
                         pack.getImageUrl(),
                         pack.getFeatures().stream()
                                 .map(f -> new PackFeatureDto(f.getLabel(), f.getIconKey()))
@@ -53,6 +54,7 @@ public class PackService {
                 pack.getDurationDays(),
                 pack.getDataAllowance(),
                 pack.getMinutesAllowance(),
+                pack.getRoamingDetails(),
                 pack.getImageUrl(),
                 pack.getFeatures().stream()
                         .map(f -> new PackFeatureDto(f.getLabel(), f.getIconKey()))
